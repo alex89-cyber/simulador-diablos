@@ -2,7 +2,9 @@
 
 Correr en local:  streamlit run app.py
 Necesita la carpeta modelos/ con los tres pkl y razones_altitud.csv que guarda Stuff_Final_v2.ipynb (sección 16a).
+Los colores rojo y blanco salen de .streamlit/config.toml y el logo de logo.svg; sin ellos la app corre igual.
 """
+import base64
 import os
 
 import plotly.graph_objects as go
@@ -12,7 +14,12 @@ import streamlit as st
 
 import simulador as sim
 
-st.set_page_config(page_title="Simulador de pitcheo Diablos Rojos", page_icon="⚾", layout="wide")
+AQUI = os.path.dirname(os.path.abspath(__file__))
+LOGO = os.path.join(AQUI, "logo.svg")
+ROJO = "#C8102E"
+
+st.set_page_config(page_title="Simulador de pitcheo Diablos Rojos",
+                   page_icon=LOGO if os.path.isfile(LOGO) else "⚾", layout="wide")
 
 # Valores típicos de un derecho por tipo de pitch, solo para arrancar el formulario (medianas redondeadas de la liga)
 TIPICOS = {
@@ -24,8 +31,8 @@ TIPICOS = {
     "Changeup": dict(velo=84.0, ivb=6.0, hb=11.5, spin=1770.0, eje=246.0, alto=5.7, lado=1.7, ext=5.9),
     "Splitter": dict(velo=83.5, ivb=3.0, hb=6.0, spin=1100.0, eje=250.0, alto=5.9, lado=1.8, ext=5.8),
 }
-# Divergente azul (peor que el promedio) a gris (100) a rojo (mejor que el promedio)
-ESCALA = [[0.0, "#184f95"], [0.25, "#6da7ec"], [0.5, "#f0efec"], [0.75, "#ec8a89"], [1.0, "#b8302f"]]
+# Divergente azul (peor que el promedio) a gris (100) a rojo Diablos (mejor que el promedio)
+ESCALA = [[0.0, "#184f95"], [0.25, "#6da7ec"], [0.5, "#f0efec"], [0.75, "#ec8a89"], [1.0, ROJO]]
 TINTA = "#0b0b0b"
 SUPERFICIE = "#fcfcfb"
 MANOS = {"Right": "Derecho", "Left": "Zurdo"}
@@ -41,13 +48,37 @@ def tipico(tipo, mano):
 
 @st.cache_resource
 def cargar_modelos():
-    return sim.cargar(os.path.join(os.path.dirname(os.path.abspath(__file__)), "modelos"))
+    return sim.cargar(os.path.join(AQUI, "modelos"))
+
+
+def logo_html():
+    """El logo como imagen incrustada para la banda roja; vacío si no está logo.svg."""
+    if not os.path.isfile(LOGO):
+        return ""
+    with open(LOGO, encoding="utf-8") as f:
+        svg = base64.b64encode(f.read().encode("utf-8")).decode("ascii")
+    return f'<img src="data:image/svg+xml;base64,{svg}" alt="Logo Diablos">'
 
 
 modelos, razones = cargar_modelos()
 cats = sim.categorias(modelos)
 
-st.title("Simulador de pitcheo: Harp Helú contra el nivel del mar")
+# Banda roja con logo, tarjetas con borde rojo y títulos de la barra lateral en rojo
+st.markdown(f"""<style>
+.dr-banda {{display: flex; align-items: center; gap: 16px; background: {ROJO}; border-radius: 12px;
+            padding: 14px 22px; margin-bottom: 8px;}}
+.dr-banda img {{width: 56px; height: 56px; background: #FFFFFF; border-radius: 50%; padding: 5px; flex-shrink: 0;}}
+.dr-titulo {{color: #FFFFFF; font-size: 1.7rem; font-weight: 700; line-height: 1.2;}}
+.dr-sub {{color: #FFFFFF; opacity: 0.92; font-size: 1rem;}}
+[data-testid="stMetric"] {{background: #FFFFFF; border: 1px solid #E6C9CD; border-left: 6px solid {ROJO};
+                          border-radius: 10px; padding: 12px 16px;}}
+[data-testid="stMetricValue"] {{color: {ROJO}; font-weight: 700;}}
+[data-testid="stSidebar"] {{border-right: 4px solid {ROJO};}}
+[data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {{color: {ROJO};}}
+</style>""", unsafe_allow_html=True)
+st.markdown(f"""<div class="dr-banda">{logo_html()}<div>
+<div class="dr-titulo">Simulador de pitcheo Diablos Rojos</div>
+<div class="dr-sub">Harp Helú contra el nivel del mar</div></div></div>""", unsafe_allow_html=True)
 st.caption("Teclea el Trackman de un pitch y ve sus tres calificaciones en los dos parques. "
            "100 es el promedio de la liga y cada 10 puntos es una desviación estándar.")
 
